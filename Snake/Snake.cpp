@@ -3,6 +3,7 @@
 #include<stdlib.h>
 #include<stdio.h>
 #include<Windows.h>
+#include<time.h>
 
 #define LARGURA 70
 #define ALTURA 25
@@ -46,13 +47,14 @@ typedef struct Node {
 void inicia_valores(char tela[ALTURA][LARGURA], Node *snk, Cobra *c);
 void desenha(char tela[ALTURA][LARGURA]);
 Node *cria_corpo(void);
-Node *insereFim(char tela[ALTURA][LARGURA], Node *snk, Cobra c);
+Node *insereSnake(char tela[ALTURA][LARGURA], Node *snk, Cobra c);
 void gerenciaCobra(char tela[ALTURA][LARGURA], Node *snk);
 void mov_Snake(char tela[ALTURA][LARGURA], Node *snk, int dir);
 void mov_SnakeEsquerda(char tela[ALTURA][LARGURA], Node *snk, int dir);
 void mov_SnakeCima(char tela[ALTURA][LARGURA], Node *snk, int dir);
 void mov_SnakeDireita(char tela[ALTURA][LARGURA], Node *snk, int dir);
 void mov_SnakeBaixo(char tela[ALTURA][LARGURA], Node *snk, int dir);
+void food(char tela[ALTURA][LARGURA]);
 
 
 int main()
@@ -64,11 +66,12 @@ int main()
 	Node *Snk = cria_corpo();
 
 	inicia_valores(tela, Snk, &c);
-	Snk = insereFim(tela, Snk, c);
-	Snk = insereFim(tela, Snk, c);
-	Snk = insereFim(tela, Snk, c);
+	Snk = insereSnake(tela, Snk, c);
+	Snk = insereSnake(tela, Snk, c);
+	Snk = insereSnake(tela, Snk, c);
 
 	gerenciaCobra(tela, Snk);
+	food(tela);
 
 	while (1)
 	{
@@ -108,6 +111,7 @@ int main()
 		}
 	}
 
+	free(Snk);
 	printf("\n");
 	system("pause");
 	return 0;
@@ -145,11 +149,9 @@ void inicia_valores(char tela[ALTURA][LARGURA], Node *snk, Cobra *c)
 	tela[0][LARGURA - 1] = SUPERIOR_DIREITO;
 	tela[ALTURA - 1][0] = INFERIOR_ESQUERDO;
 	tela[ALTURA - 1][LARGURA - 1] = INFERIOR_DIREITO;
-	//tela[ALTURA / 2][LARGURA / 2] = c->corpo;
 	c->x = ALTURA / 2;
 	c->y = LARGURA / 2;
-	c->d = ESQUERDA;
-	//tela[ALTURA/2][(LARGURA + 2)/2] = FOOD;
+	c->d = DIREITA;
 }
 
 void gerenciaCobra(char tela[ALTURA][LARGURA], Node *snk)
@@ -174,7 +176,7 @@ void desenha(char tela[ALTURA][LARGURA])
 	}
 }
 
-Node *insereFim(char tela[ALTURA][LARGURA], Node *snk, Cobra c)
+Node *insereSnake(char tela[ALTURA][LARGURA], Node *snk, Cobra c)
 {
 	Node *novo = (Node *)malloc(sizeof(Node));
 	Node *ant = NULL;
@@ -184,7 +186,7 @@ Node *insereFim(char tela[ALTURA][LARGURA], Node *snk, Cobra c)
 
 	for (p = snk; p != NULL; p = p->prox)
 	{
-		p->n.y--;
+		p->n.y++;
 		ant = p;
 	}
 
@@ -230,10 +232,25 @@ void mov_SnakeEsquerda(char tela[ALTURA][LARGURA], Node *snk, int dir)
 {
 	Node *p = snk;
 
-	if (p->n.y > 1 || p->prox->n.y < p->n.y)
+	if (tela[p->n.x][p->n.y - 1] == ESPACO || tela[p->n.x][p->n.y - 1] == FOOD)
 	{
 		tela[p->n.x][p->n.y] = ESPACO;
 		p->n.y--;
+		tela[p->n.x][p->n.y] = p->n.corpo;
+		if (tela[p->n.x][p->n.y - 1] == FOOD)
+		{
+			food(tela);
+		}
+		if (p->prox != NULL)
+		{
+			mov_Snake(tela, p->prox, dir);
+			p->prox->n.d = p->n.d;
+		}
+	}
+	else if (p->n.y == 1)
+	{
+		tela[p->n.x][p->n.y] = ESPACO;
+		p->n.y = LARGURA - 2;
 		tela[p->n.x][p->n.y] = p->n.corpo;
 		if (p->prox != NULL)
 		{
@@ -247,10 +264,25 @@ void mov_SnakeCima(char tela[ALTURA][LARGURA], Node *snk, int dir)
 {
 	Node *p = snk;
 
-	if (p->n.x > 1 || p->prox->n.x < p->n.x)
+	if (tela[p->n.x - 1][p->n.y] == ESPACO || tela[p->n.x - 1][p->n.y] == FOOD)
 	{
 		tela[p->n.x][p->n.y] = ESPACO;
 		p->n.x--;
+		tela[p->n.x][p->n.y] = p->n.corpo;
+		if (tela[p->n.x - 1][p->n.y] == FOOD)
+		{
+			food(tela);
+		}
+		if (p->prox != NULL)
+		{
+			mov_Snake(tela, p->prox, dir);
+			p->prox->n.d = p->n.d;
+		}
+	}
+	else if (p->n.x == 1)
+	{
+		tela[p->n.x][p->n.y] = ESPACO;
+		p->n.x = ALTURA - 2;
 		tela[p->n.x][p->n.y] = p->n.corpo;
 		if (p->prox != NULL)
 		{
@@ -264,10 +296,25 @@ void mov_SnakeDireita(char tela[ALTURA][LARGURA], Node *snk, int dir)
 {
 	Node *p = snk;
 
-	if (p->n.y < LARGURA - 2 || p->prox->n.y > p->n.y)
+	if (tela[p->n.x][p->n.y + 1] == ESPACO || tela[p->n.x][p->n.y + 1] == FOOD)
 	{
 		tela[p->n.x][p->n.y] = ESPACO;
 		p->n.y++;
+		tela[p->n.x][p->n.y] = p->n.corpo;
+		if (tela[p->n.x][p->n.y + 1] == FOOD)
+		{
+			food(tela);
+		}
+		if (p->prox != NULL)
+		{
+			mov_Snake(tela, p->prox, dir);
+			p->prox->n.d = p->n.d;
+		}
+	}
+	else if (p->n.y == LARGURA - 2)
+	{
+		tela[p->n.x][p->n.y] = ESPACO;
+		p->n.y = 1;
 		tela[p->n.x][p->n.y] = p->n.corpo;
 		if (p->prox != NULL)
 		{
@@ -281,10 +328,25 @@ void mov_SnakeBaixo(char tela[ALTURA][LARGURA], Node *snk, int dir)
 {
 	Node *p = snk;
 
-	if (p->n.x < ALTURA - 2 || p->prox->n.x > p->n.x)
+	if (tela[p->n.x + 1][p->n.y] == ESPACO || tela[p->n.x + 1][p->n.y] == FOOD)
 	{
 		tela[p->n.x][p->n.y] = ESPACO;
 		p->n.x++;
+		tela[p->n.x][p->n.y] = p->n.corpo;
+		if (tela[p->n.x + 1][p->n.y] == FOOD)
+		{
+			food(tela);
+		}
+		if (p->prox != NULL)
+		{
+			mov_Snake(tela, p->prox, dir);
+			p->prox->n.d = p->n.d;
+		}
+	}
+	else if (p->n.x == ALTURA - 2)
+	{
+		tela[p->n.x][p->n.y] = ESPACO;
+		p->n.x = 1;
 		tela[p->n.x][p->n.y] = p->n.corpo;
 		if (p->prox != NULL)
 		{
@@ -292,4 +354,15 @@ void mov_SnakeBaixo(char tela[ALTURA][LARGURA], Node *snk, int dir)
 			p->prox->n.d = p->n.d;
 		}
 	}
+}
+
+void food(char tela[ALTURA][LARGURA])
+{
+	int x, y;
+
+	srand(time(NULL));
+	x = 1 + (rand() % 23);
+	y = 1 + (rand() % 68);
+
+	tela[x][y] = FOOD;
 }
