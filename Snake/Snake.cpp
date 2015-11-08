@@ -3,7 +3,6 @@
 #include<stdlib.h>
 #include<stdio.h>
 #include<Windows.h>
-#include "Header.h"
 
 #define LARGURA 70
 #define ALTURA 25
@@ -45,37 +44,71 @@ typedef struct Node {
 };
 
 void inicia_valores(char tela[ALTURA][LARGURA], Node *snk, Cobra *c);
-void desenha(char tela[ALTURA][LARGURA], Node *snk);
+void desenha(char tela[ALTURA][LARGURA]);
 Node *cria_corpo(void);
 Node *insereFim(char tela[ALTURA][LARGURA], Node *snk, Cobra c);
-void mov_Snake(char tela[ALTURA][LARGURA], Node *snk, Cobra *c);
+void gerenciaCobra(char tela[ALTURA][LARGURA], Node *snk);
+void mov_Snake(char tela[ALTURA][LARGURA], Node *snk, int dir);
+void mov_SnakeEsquerda(char tela[ALTURA][LARGURA], Node *snk, int dir);
+void mov_SnakeCima(char tela[ALTURA][LARGURA], Node *snk, int dir);
+void mov_SnakeDireita(char tela[ALTURA][LARGURA], Node *snk, int dir);
+void mov_SnakeBaixo(char tela[ALTURA][LARGURA], Node *snk, int dir);
+
 
 int main()
 {
 	char tela[ALTURA][LARGURA];
 	Cobra c;
 	int dir;
-	
+
 	Node *Snk = cria_corpo();
 
 	inicia_valores(tela, Snk, &c);
 	Snk = insereFim(tela, Snk, c);
 	Snk = insereFim(tela, Snk, c);
 	Snk = insereFim(tela, Snk, c);
-	
+
+	gerenciaCobra(tela, Snk);
+
 	while (1)
 	{
 		COORD cord;
 		cord.X = 0;
 		cord.Y = 0;
 		SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), cord);
-		desenha(tela, Snk);
+		desenha(tela);
 
 		if (_kbhit())
 		{
 			dir = _getch();
 		}
+		if (dir == SETA_ESQUERDA)
+		{
+			Snk->n.d = ESQUERDA;
+			mov_Snake(tela, Snk, dir);
+		}
+		else if (dir == SETA_CIMA)
+		{
+			Snk->n.d = CIMA;
+			mov_Snake(tela, Snk, dir);
+		}
+		if (dir == SETA_DIREITA)
+		{
+			Snk->n.d = DIREITA;
+			mov_Snake(tela, Snk, dir);
+		}
+		else if (dir == SETA_BAIXO)
+		{
+			Snk->n.d = BAIXO;
+			mov_Snake(tela, Snk, dir);
+		}
+		else if (dir == ESC)
+		{
+			exit(0);
+		}
 	}
+
+	printf("\n");
 	system("pause");
 	return 0;
 }
@@ -112,14 +145,22 @@ void inicia_valores(char tela[ALTURA][LARGURA], Node *snk, Cobra *c)
 	tela[0][LARGURA - 1] = SUPERIOR_DIREITO;
 	tela[ALTURA - 1][0] = INFERIOR_ESQUERDO;
 	tela[ALTURA - 1][LARGURA - 1] = INFERIOR_DIREITO;
-	tela[ALTURA / 2][LARGURA / 2] = c->corpo;
+	//tela[ALTURA / 2][LARGURA / 2] = c->corpo;
 	c->x = ALTURA / 2;
 	c->y = LARGURA / 2;
-	tela[ALTURA/2][(LARGURA + 2)/2] = FOOD;
-	c->d = DIREITA;
+	c->d = ESQUERDA;
+	//tela[ALTURA/2][(LARGURA + 2)/2] = FOOD;
 }
 
-void desenha(char tela[ALTURA][LARGURA], Node *snk)
+void gerenciaCobra(char tela[ALTURA][LARGURA], Node *snk)
+{
+	for (Node *p = snk; p != NULL; p = p->prox)
+	{
+		tela[p->n.x][p->n.y] = p->n.corpo;
+	}
+}
+
+void desenha(char tela[ALTURA][LARGURA])
 {
 	int i, j;
 
@@ -139,8 +180,11 @@ Node *insereFim(char tela[ALTURA][LARGURA], Node *snk, Cobra c)
 	Node *ant = NULL;
 	Node *p;
 
+	int i, j;
+
 	for (p = snk; p != NULL; p = p->prox)
 	{
+		p->n.y--;
 		ant = p;
 	}
 
@@ -155,10 +199,97 @@ Node *insereFim(char tela[ALTURA][LARGURA], Node *snk, Cobra c)
 	{
 		novo->prox = ant->prox;
 		ant->prox = novo;
-		snk->n.y--;
 	}
 
-	tela[novo->n.x][snk->n.y] = novo->n.corpo;
-
 	return snk;
+}
+
+void mov_Snake(char tela[ALTURA][LARGURA], Node *snk, int dir)
+{
+	Node *p = snk;
+
+	if (p->n.d == ESQUERDA)
+	{
+		mov_SnakeEsquerda(tela, p, dir);
+	}
+	else if (p->n.d == CIMA)
+	{
+		mov_SnakeCima(tela, p, dir);
+	}
+	if (p->n.d == DIREITA)
+	{
+		mov_SnakeDireita(tela, p, dir);
+	}
+	else if (p->n.d == BAIXO)
+	{
+		mov_SnakeBaixo(tela, p, dir);
+	}
+}
+
+void mov_SnakeEsquerda(char tela[ALTURA][LARGURA], Node *snk, int dir)
+{
+	Node *p = snk;
+
+	if (p->n.y > 1 || p->prox->n.y < p->n.y)
+	{
+		tela[p->n.x][p->n.y] = ESPACO;
+		p->n.y--;
+		tela[p->n.x][p->n.y] = p->n.corpo;
+		if (p->prox != NULL)
+		{
+			mov_Snake(tela, p->prox, dir);
+			p->prox->n.d = p->n.d;
+		}
+	}
+}
+
+void mov_SnakeCima(char tela[ALTURA][LARGURA], Node *snk, int dir)
+{
+	Node *p = snk;
+
+	if (p->n.x > 1 || p->prox->n.x < p->n.x)
+	{
+		tela[p->n.x][p->n.y] = ESPACO;
+		p->n.x--;
+		tela[p->n.x][p->n.y] = p->n.corpo;
+		if (p->prox != NULL)
+		{
+			mov_Snake(tela, p->prox, dir);
+			p->prox->n.d = p->n.d;
+		}
+	}
+}
+
+void mov_SnakeDireita(char tela[ALTURA][LARGURA], Node *snk, int dir)
+{
+	Node *p = snk;
+
+	if (p->n.y < LARGURA - 2 || p->prox->n.y > p->n.y)
+	{
+		tela[p->n.x][p->n.y] = ESPACO;
+		p->n.y++;
+		tela[p->n.x][p->n.y] = p->n.corpo;
+		if (p->prox != NULL)
+		{
+			mov_Snake(tela, p->prox, dir);
+			p->prox->n.d = p->n.d;
+		}
+	}
+}
+
+void mov_SnakeBaixo(char tela[ALTURA][LARGURA], Node *snk, int dir)
+{
+	Node *p = snk;
+
+	if (p->n.x < ALTURA - 2 || p->prox->n.x > p->n.x)
+	{
+		tela[p->n.x][p->n.y] = ESPACO;
+		p->n.x++;
+		tela[p->n.x][p->n.y] = p->n.corpo;
+		if (p->prox != NULL)
+		{
+			mov_Snake(tela, p->prox, dir);
+			p->prox->n.d = p->n.d;
+		}
+	}
 }
