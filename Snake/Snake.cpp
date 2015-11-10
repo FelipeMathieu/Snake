@@ -49,14 +49,14 @@ void desenha(char tela[ALTURA][LARGURA]);
 Node *cria_corpo(void);
 Node *insereSnake(char tela[ALTURA][LARGURA], Node *snk, Cobra c);
 Node *insereCorpo(char tela[ALTURA][LARGURA], Node *snk, Cobra c);
-void gerenciaCobra(char tela[ALTURA][LARGURA], Node *snk);
+void gerenciaCobra(char tela[ALTURA][LARGURA], Node *snk, int dir);
 void mov_Snake(char tela[ALTURA][LARGURA], Node *snk, int dir);
 void mov_SnakeEsquerda(char tela[ALTURA][LARGURA], Node *snk, int dir);
 void mov_SnakeCima(char tela[ALTURA][LARGURA], Node *snk, int dir);
 void mov_SnakeDireita(char tela[ALTURA][LARGURA], Node *snk, int dir);
 void mov_SnakeBaixo(char tela[ALTURA][LARGURA], Node *snk, int dir);
 void food(char tela[ALTURA][LARGURA]);
-void reset(void);
+void reset(char tela[ALTURA][LARGURA], Node *snk);
 void update(char tela[ALTURA][LARGURA], Node *snk, int dir);
 
 
@@ -64,17 +64,16 @@ int main(void)
 {
 	char tela[ALTURA][LARGURA];
 	Cobra c;
-	int dir;
+	int dir = SETA_DIREITA;
 
 	Node *Snk = cria_corpo();
-	Node *aux = NULL;
 
 	inicia_valores(tela, Snk, &c);
 	Snk = insereSnake(tela, Snk, c);
 	Snk = insereSnake(tela, Snk, c);
 	Snk = insereSnake(tela, Snk, c);
 
-	gerenciaCobra(tela, Snk);
+	gerenciaCobra(tela, Snk, dir);
 	food(tela);
 
 	while (1)
@@ -88,12 +87,10 @@ int main(void)
 		if (_kbhit())
 		{
 			dir = _getch();
-			//update(tela, Snk, dir);
 		}
 		update(tela, Snk, dir);
 	}
 
-	free(Snk);
 	printf("\n");
 	system("pause");
 	return 0;
@@ -136,27 +133,10 @@ void inicia_valores(char tela[ALTURA][LARGURA], Node *snk, Cobra *c)
 	c->d = DIREITA;
 }
 
-void gerenciaCobra(char tela[ALTURA][LARGURA], Node *snk)
+void gerenciaCobra(char tela[ALTURA][LARGURA], Node *snk, int dir)
 {
 	for (Node *p = snk; p != NULL; p = p->prox)
 	{
-		if (p->n.d == ESQUERDA)
-		{
-			tela[p->n.x][p->n.y - 1] = ESPACO;
-		}
-		else if (p->n.d == CIMA)
-		{
-			tela[p->n.x - 1][p->n.y] = ESPACO;
-		}
-		else if (p->n.d == DIREITA)
-		{
-			tela[p->n.x][p->n.y + 1] = ESPACO;
-		}
-		else if (p->n.d == BAIXO)
-		{
-			tela[p->n.x + 1][p->n.y] = ESPACO;
-		}
-
 		tela[p->n.x][p->n.y] = p->n.corpo;
 	}
 }
@@ -181,8 +161,6 @@ Node *insereCorpo(char tela[ALTURA][LARGURA], Node *snk, Cobra c)
 	Node *ant = NULL;
 	Node *p = snk;
 
-	int r;
-
 	for (p; p != NULL; p = p->prox)
 	{
 		ant = p;
@@ -192,25 +170,21 @@ Node *insereCorpo(char tela[ALTURA][LARGURA], Node *snk, Cobra c)
 
 	if (ant->prox == NULL && ant->n.d == ESQUERDA)
 	{
-		novo->n.y++;
 		novo->prox = ant->prox;
 		ant->prox = novo;
 	}
 	if (ant->prox == NULL && ant->n.d == DIREITA)
 	{
-		novo->n.y--;
 		novo->prox = ant->prox;
 		ant->prox = novo;
 	}
 	if (ant->prox == NULL && ant->n.d == CIMA)
 	{
-		novo->n.x++;
 		novo->prox = ant->prox;
 		ant->prox = novo;
 	}
 	if (ant->prox == NULL && ant->n.d == BAIXO)
 	{
-		novo->n.x--;
 		novo->prox = ant->prox;
 		ant->prox = novo;
 	}
@@ -272,17 +246,18 @@ void mov_SnakeEsquerda(char tela[ALTURA][LARGURA], Node *snk, int dir)
 	Node *p = snk;
 	Node *aux = NULL;
 
-	if (tela[p->n.x][p->n.y - 1] == ESPACO || tela[p->n.x][p->n.y - 1] == FOOD)
+	if ((tela[p->n.x][p->n.y - 1] == ESPACO || tela[p->n.x][p->n.y - 1] == FOOD) && p->n.y != 1)
 	{
 		tela[p->n.x][p->n.y] = ESPACO;
 		p->n.y--;
 		tela[p->n.x][p->n.y] = p->n.corpo;
+
 		if (tela[p->n.x][p->n.y - 1] == FOOD)
 		{
 			for (aux = snk; aux->prox != NULL; aux = aux->prox);
-			insereCorpo(tela, aux, aux->n);
 			mov_Snake(tela, p, dir);
-			gerenciaCobra(tela, p);
+			insereCorpo(tela, aux, aux->n);
+			gerenciaCobra(tela, p, dir);
 			food(tela);
 		}
 		if (p->prox != NULL)
@@ -291,15 +266,37 @@ void mov_SnakeEsquerda(char tela[ALTURA][LARGURA], Node *snk, int dir)
 			p->prox->n.d = p->n.d;
 		}
 	}
-	else if (p->n.y == 1)
+	else if(p->n.y == 1)
 	{
 		tela[p->n.x][p->n.y] = ESPACO;
 		p->n.y = LARGURA - 2;
 		tela[p->n.x][p->n.y] = p->n.corpo;
+
+		if (tela[p->n.x][p->n.y - 1] == FOOD)
+		{
+			if (p->n.y <= LARGURA - 2)
+			{
+				for (aux = snk; aux->prox != NULL; aux = aux->prox);
+				mov_Snake(tela, p, dir);
+				insereCorpo(tela, aux, aux->n);
+				gerenciaCobra(tela, p, dir);
+				food(tela);
+			}
+		}
 		if (p->prox != NULL)
 		{
 			mov_Snake(tela, p->prox, dir);
 			p->prox->n.d = p->n.d;
+		}
+	}
+	else
+	{
+		for (aux = p; aux->prox != NULL; aux = aux->prox)
+		{
+			if ((aux->n.y - 1) == aux->prox->n.y)
+			{
+				reset(tela, p);
+			}
 		}
 	}
 }
@@ -309,17 +306,17 @@ void mov_SnakeCima(char tela[ALTURA][LARGURA], Node *snk, int dir)
 	Node *p = snk;
 	Node *aux = NULL;
 
-	if (tela[p->n.x - 1][p->n.y] == ESPACO || tela[p->n.x - 1][p->n.y] == FOOD)
+	if ((tela[p->n.x - 1][p->n.y] == ESPACO || tela[p->n.x - 1][p->n.y] == FOOD) && p->n.x != 1)
 	{
 		tela[p->n.x][p->n.y] = ESPACO;
 		p->n.x--;
 		tela[p->n.x][p->n.y] = p->n.corpo;
 		if (tela[p->n.x - 1][p->n.y] == FOOD)
 		{
-			for (aux = p; aux->prox != NULL; aux = aux->prox);
+			for (aux = snk; aux->prox != NULL; aux = aux->prox);
 			insereCorpo(tela, aux, aux->n);
 			mov_Snake(tela, p, dir);
-			gerenciaCobra(tela, p);
+			gerenciaCobra(tela, p, dir);
 			food(tela);
 		}
 		if (p->prox != NULL)
@@ -333,10 +330,33 @@ void mov_SnakeCima(char tela[ALTURA][LARGURA], Node *snk, int dir)
 		tela[p->n.x][p->n.y] = ESPACO;
 		p->n.x = ALTURA - 2;
 		tela[p->n.x][p->n.y] = p->n.corpo;
+		tela[0][p->n.y] = HORIZONTAL;
+		tela[ALTURA][p->n.y] = HORIZONTAL;
+		if (tela[p->n.x - 1][p->n.y] == FOOD)
+		{
+			if (p->n.x >= ALTURA - 2)
+			{
+				for (aux = snk; aux->prox != NULL; aux = aux->prox);
+				mov_Snake(tela, p, dir);
+				insereCorpo(tela, aux, aux->n);
+				gerenciaCobra(tela, p, dir);
+				food(tela);
+			}
+		}
 		if (p->prox != NULL)
 		{
 			mov_Snake(tela, p->prox, dir);
 			p->prox->n.d = p->n.d;
+		}
+	}
+	else
+	{
+		for (aux = p; aux->prox != NULL; aux = aux->prox)
+		{
+			if ((aux->n.x - 1) == aux->prox->n.x)
+			{
+				reset(tela, p);
+			}
 		}
 	}
 }
@@ -346,17 +366,17 @@ void mov_SnakeDireita(char tela[ALTURA][LARGURA], Node *snk, int dir)
 	Node *p = snk;
 	Node *aux = NULL;
 
-	if (tela[p->n.x][p->n.y + 1] == ESPACO || tela[p->n.x][p->n.y + 1] == FOOD)
+	if ((tela[p->n.x][p->n.y + 1] == ESPACO || tela[p->n.x][p->n.y + 1] == FOOD)  && p->n.y != LARGURA - 2)
 	{
 		tela[p->n.x][p->n.y] = ESPACO;
 		p->n.y++;
 		tela[p->n.x][p->n.y] = p->n.corpo;
 		if (tela[p->n.x][p->n.y + 1] == FOOD)
 		{
-			for (aux = p; aux->prox != NULL; aux = aux->prox);
-			insereCorpo(tela, aux, aux->n);
+			for (aux = snk; aux->prox != NULL; aux = aux->prox);
 			mov_Snake(tela, p, dir);
-			gerenciaCobra(tela, p);
+			insereCorpo(tela, aux, aux->n);
+			gerenciaCobra(tela, p, dir);
 			food(tela);
 		}
 		if (p->prox != NULL)
@@ -370,10 +390,33 @@ void mov_SnakeDireita(char tela[ALTURA][LARGURA], Node *snk, int dir)
 		tela[p->n.x][p->n.y] = ESPACO;
 		p->n.y = 1;
 		tela[p->n.x][p->n.y] = p->n.corpo;
+		tela[p->n.x][0] = VERTICAL;
+		tela[p->n.x][LARGURA] = VERTICAL;
+		if (tela[p->n.x][p->n.y + 1] == FOOD)
+		{
+			if (p->n.y <= 1)
+			{
+				for (aux = snk; aux->prox != NULL; aux = aux->prox);
+				mov_Snake(tela, p, dir);
+				insereCorpo(tela, aux, aux->n);
+				gerenciaCobra(tela, p, dir);
+				food(tela);
+			}
+		}
 		if (p->prox != NULL)
 		{
 			mov_Snake(tela, p->prox, dir);
 			p->prox->n.d = p->n.d;
+		}
+	}
+	else
+	{
+		for (aux = p; aux->prox != NULL; aux = aux->prox)
+		{
+			if ((aux->n.y + 1) == aux->prox->n.y)
+			{
+				reset(tela, p);
+			}
 		}
 	}
 }
@@ -383,17 +426,17 @@ void mov_SnakeBaixo(char tela[ALTURA][LARGURA], Node *snk, int dir)
 	Node *p = snk;
 	Node *aux = NULL;
 
-	if (tela[p->n.x + 1][p->n.y] == ESPACO || tela[p->n.x + 1][p->n.y] == FOOD)
+	if ((tela[p->n.x + 1][p->n.y] == ESPACO || tela[p->n.x + 1][p->n.y] == FOOD) && p->n.x != ALTURA - 2)
 	{
 		tela[p->n.x][p->n.y] = ESPACO;
 		p->n.x++;
 		tela[p->n.x][p->n.y] = p->n.corpo;
 		if (tela[p->n.x + 1][p->n.y] == FOOD)
 		{
-			for (aux = p; aux->prox != NULL; aux = aux->prox);
+			for (aux = snk; aux->prox != NULL; aux = aux->prox);
 			insereCorpo(tela, aux, aux->n);
 			mov_Snake(tela, p, dir);
-			gerenciaCobra(tela, p);
+			gerenciaCobra(tela, p, dir);
 			food(tela);
 		}
 		if (p->prox != NULL)
@@ -407,10 +450,31 @@ void mov_SnakeBaixo(char tela[ALTURA][LARGURA], Node *snk, int dir)
 		tela[p->n.x][p->n.y] = ESPACO;
 		p->n.x = 1;
 		tela[p->n.x][p->n.y] = p->n.corpo;
+		if (tela[p->n.x + 1][p->n.y] == FOOD)
+		{
+			if (p->n.x <= 1)
+			{
+				for (aux = snk; aux->prox != NULL; aux = aux->prox);
+				mov_Snake(tela, p, dir);
+				insereCorpo(tela, aux, aux->n);
+				gerenciaCobra(tela, p, dir);
+				food(tela);
+			}
+		}
 		if (p->prox != NULL)
 		{
 			mov_Snake(tela, p->prox, dir);
 			p->prox->n.d = p->n.d;
+		}
+	}
+	else
+	{
+		for (aux = p; aux->prox != NULL; aux = aux->prox)
+		{
+			if ((aux->n.x + 1) == aux->prox->n.x)
+			{
+				reset(tela, p);
+			}
 		}
 	}
 }
@@ -419,21 +483,101 @@ void food(char tela[ALTURA][LARGURA])
 {
 	int x, y;
 
-	srand(time(NULL));
-	x = 1 + (rand() % 23);
-	y = 1 + (rand() % 68);
+	x = rand() % ALTURA;
+	y = rand() % LARGURA;
 
-	tela[x][y] = FOOD;
+	if (x > 1 && x < ALTURA - 2 && y > 1 && y < LARGURA - 2 )
+	{
+		tela[x][y] = FOOD;
+	}
+	else
+	{
+		food(tela);
+	}
 }
 
-void reset(void)
+void reset(char tela[ALTURA][LARGURA], Node *snk)
 {
-	main();
+	int c;
+
+	for (int i = 0; i < ALTURA; i++)
+	{
+		for (int j = 0; j < LARGURA; j++)
+		{
+			if (i == 0 || i == ALTURA - 1)
+			{
+				tela[i][j] = HORIZONTAL;
+			}
+			else if (j == 0 || j == LARGURA - 1)
+			{
+				tela[i][j] = VERTICAL;
+			}
+			else
+			{
+				tela[i][j] = ESPACO;
+			}
+		}
+	}
+
+	tela[0][0] = SUPERIOR_ESQUERDO;
+	tela[0][LARGURA - 1] = SUPERIOR_DIREITO;
+	tela[ALTURA - 1][0] = INFERIOR_ESQUERDO;
+	tela[ALTURA - 1][LARGURA - 1] = INFERIOR_DIREITO;
+
+	tela[ALTURA / 2][(LARGURA / 2) - 3] = 'V';
+	tela[ALTURA / 2][(LARGURA / 2) - 2] = 'O';
+	tela[ALTURA / 2][(LARGURA / 2) - 1] = 'C';
+	tela[ALTURA / 2][(LARGURA / 2)] = 'E';
+	tela[ALTURA / 2][(LARGURA / 2) + 1] = ESPACO;
+	tela[ALTURA / 2][(LARGURA / 2) + 2] = 'P';
+	tela[ALTURA / 2][(LARGURA / 2) + 3] = 'E';
+	tela[ALTURA / 2][(LARGURA / 2) + 4] = 'R';
+	tela[ALTURA / 2][(LARGURA / 2) + 5] = 'D';
+	tela[ALTURA / 2][(LARGURA / 2) + 6] = 'E';
+	tela[ALTURA / 2][(LARGURA / 2) + 7] = 'U';
+
+	tela[(ALTURA / 2) + 1][(LARGURA / 2) - 5] = 'C';
+	tela[(ALTURA / 2) + 1][(LARGURA / 2) - 4] = 'O';
+	tela[(ALTURA / 2) + 1][(LARGURA / 2) - 3] = 'N';
+	tela[(ALTURA / 2) + 1][(LARGURA / 2) - 2] = 'T';
+	tela[(ALTURA / 2) + 1][(LARGURA / 2) - 1] = 'I';
+	tela[(ALTURA / 2) + 1][(LARGURA / 2)] = 'N';
+	tela[(ALTURA / 2) + 1][(LARGURA / 2) + 1] = 'U';
+	tela[(ALTURA / 2) + 1][(LARGURA / 2) + 2] = 'A';
+	tela[(ALTURA / 2) + 1][(LARGURA / 2) + 3] = 'R';
+	tela[(ALTURA / 2) + 1][(LARGURA / 2) + 4] = '?';
+	tela[(ALTURA / 2) + 1][(LARGURA / 2) + 5] = '(';
+	tela[(ALTURA / 2) + 1][(LARGURA / 2) + 6] = 'S';
+	tela[(ALTURA / 2) + 1][(LARGURA / 2) + 7] = '/';
+	tela[(ALTURA / 2) + 1][(LARGURA / 2) + 8] = 'N';
+	tela[(ALTURA / 2) + 1][(LARGURA / 2) + 9] = ')';
+
+
+	COORD cord;
+	cord.X = 0;
+	cord.Y = 0;
+	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), cord);
+	desenha(tela);
+	c = _getch();
+
+	if (c == 's' || c == 'S')
+	{
+		free(snk);
+		main();
+	}
+	else if(c == 'n' || c == 'N')
+	{
+		free(snk);
+		exit(0);
+	}
+	else
+	{
+		reset(tela, snk);
+	}
 }
 
 void update(char tela[ALTURA][LARGURA], Node *snk, int dir)
 {
-
 	Node *p = snk;
 	Node *aux = NULL;
 
@@ -445,7 +589,7 @@ void update(char tela[ALTURA][LARGURA], Node *snk, int dir)
 			insereCorpo(tela, aux, aux->n);
 			p->n.d = ESQUERDA;
 			mov_Snake(tela, p, dir);
-			gerenciaCobra(tela, p);
+			gerenciaCobra(tela, p, dir);
 			food(tela);
 		}
 		else
@@ -462,7 +606,7 @@ void update(char tela[ALTURA][LARGURA], Node *snk, int dir)
 			insereCorpo(tela, aux, aux->n);
 			p->n.d = CIMA;
 			mov_Snake(tela, p, dir);
-			gerenciaCobra(tela, p);
+			gerenciaCobra(tela, p, dir);
 			food(tela);
 		}
 		else
@@ -479,7 +623,7 @@ void update(char tela[ALTURA][LARGURA], Node *snk, int dir)
 			insereCorpo(tela, aux, aux->n);
 			p->n.d = DIREITA;
 			mov_Snake(tela, p, dir);
-			gerenciaCobra(tela,p);
+			gerenciaCobra(tela, p, dir);
 			food(tela);
 		}
 		else
@@ -496,7 +640,7 @@ void update(char tela[ALTURA][LARGURA], Node *snk, int dir)
 			insereCorpo(tela, aux, aux->n);
 			p->n.d = BAIXO;
 			mov_Snake(tela, p, dir);
-			gerenciaCobra(tela, p);
+			gerenciaCobra(tela, p, dir);
 			food(tela);
 		}
 		else
