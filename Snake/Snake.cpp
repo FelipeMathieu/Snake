@@ -297,6 +297,16 @@ void mov_SnakeEsquerda(char tela[ALTURA][LARGURA], Node *snk, int dir)
 			{
 				reset(tela, p);
 			}
+			else
+			{
+				for (p; p->prox != NULL; p = p->prox)
+				{
+					if ((aux->n.y - 1) == p->prox->n.y)
+					{
+						reset(tela, p);
+					}
+				}
+			}
 		}
 	}
 }
@@ -356,6 +366,16 @@ void mov_SnakeCima(char tela[ALTURA][LARGURA], Node *snk, int dir)
 			if ((aux->n.x - 1) == aux->prox->n.x)
 			{
 				reset(tela, p);
+			}
+			else
+			{
+				for (p; p->prox != NULL; p = p->prox)
+				{
+					if ((aux->n.x - 1) == p->prox->n.x)
+					{
+						reset(tela, p);
+					}
+				}
 			}
 		}
 	}
@@ -417,6 +437,16 @@ void mov_SnakeDireita(char tela[ALTURA][LARGURA], Node *snk, int dir)
 			{
 				reset(tela, p);
 			}
+			else
+			{
+				for (p; p->prox != NULL; p = p->prox)
+				{
+					if ((aux->n.y + 1) == p->prox->n.y)
+					{
+						reset(tela, p);
+					}
+				}
+			}
 		}
 	}
 }
@@ -474,6 +504,16 @@ void mov_SnakeBaixo(char tela[ALTURA][LARGURA], Node *snk, int dir)
 			if ((aux->n.x + 1) == aux->prox->n.x)
 			{
 				reset(tela, p);
+			}
+			else
+			{
+				for (p; p->prox != NULL; p = p->prox)
+				{
+					if ((aux->n.x + 1) == p->prox->n.x)
+					{
+						reset(tela, p);
+					}
+				}
 			}
 		}
 	}
