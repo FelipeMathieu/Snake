@@ -60,7 +60,7 @@ void reset(char tela[ALTURA][LARGURA], Node *snk);
 void update(char tela[ALTURA][LARGURA], Node *snk, int dir);
 void score(char tela[ALTURA][LARGURA]);
 
-char u = '0', d = '0', c = '0';
+char unidade = '0', dezena = '0', centena = '0';
 char s[3];
 
 int main(void)
@@ -265,12 +265,17 @@ void mov_SnakeEsquerda(char tela[ALTURA][LARGURA], Node *snk, int dir)
 
 		if (tela[p->n.x][p->n.y - 1] == FOOD)
 		{
-			for (aux = snk; aux->prox != NULL; aux = aux->prox);
-			mov_Snake(tela, p, dir);
-			insereCorpo(tela, aux, aux->n);
-			gerenciaCobra(tela, p, dir);
-			food(tela);
-			score(tela);
+			for (aux = p; aux->prox != NULL; aux = aux->prox)
+			{
+				if (aux->prox == NULL)
+				{
+					mov_Snake(tela, p, dir);
+					insereCorpo(tela, aux, aux->n);
+					gerenciaCobra(tela, p, dir);
+					food(tela);
+					score(tela);
+				}
+			}
 		}
 		if (p->prox != NULL)
 		{
@@ -290,7 +295,6 @@ void mov_SnakeEsquerda(char tela[ALTURA][LARGURA], Node *snk, int dir)
 			{
 				if (aux->n.y <= LARGURA - 2 && aux->prox == NULL)
 				{
-					//for (aux = snk; aux->prox != NULL; aux = aux->prox);
 					mov_Snake(tela, p, dir);
 					insereCorpo(tela, aux, aux->n);
 					gerenciaCobra(tela, p, dir);
@@ -339,12 +343,17 @@ void mov_SnakeCima(char tela[ALTURA][LARGURA], Node *snk, int dir)
 		tela[p->n.x][p->n.y] = p->n.corpo;
 		if (tela[p->n.x - 1][p->n.y] == FOOD)
 		{
-			for (aux = snk; aux->prox != NULL; aux = aux->prox);
-			insereCorpo(tela, aux, aux->n);
-			mov_Snake(tela, p, dir);
-			gerenciaCobra(tela, p, dir);
-			food(tela);
-			score(tela);
+			for (aux = p; aux->prox != NULL; aux = aux->prox)
+			{
+				if (aux->prox == NULL)
+				{
+					insereCorpo(tela, aux, aux->n);
+					mov_Snake(tela, p, dir);
+					gerenciaCobra(tela, p, dir);
+					food(tela);
+					score(tela);
+				}
+			}
 		}
 		if (p->prox != NULL)
 		{
@@ -363,7 +372,6 @@ void mov_SnakeCima(char tela[ALTURA][LARGURA], Node *snk, int dir)
 			{
 				if (aux->n.x <= ALTURA - 2 && aux->prox == NULL)
 				{
-					//for (aux = snk; aux->prox != NULL; aux = aux->prox);
 					mov_Snake(tela, p, dir);
 					insereCorpo(tela, aux, aux->n);
 					gerenciaCobra(tela, p, dir);
@@ -412,12 +420,17 @@ void mov_SnakeDireita(char tela[ALTURA][LARGURA], Node *snk, int dir)
 		tela[p->n.x][p->n.y] = p->n.corpo;
 		if (tela[p->n.x][p->n.y + 1] == FOOD)
 		{
-			for (aux = snk; aux->prox != NULL; aux = aux->prox);
-			mov_Snake(tela, p, dir);
-			insereCorpo(tela, aux, aux->n);
-			gerenciaCobra(tela, p, dir);
-			food(tela);
-			score(tela);
+			for (aux = p; aux->prox != NULL; aux = aux->prox)
+			{
+				if (aux->prox == NULL)
+				{
+					mov_Snake(tela, p, dir);
+					insereCorpo(tela, aux, aux->n);
+					gerenciaCobra(tela, p, dir);
+					food(tela);
+					score(tela);
+				}
+			}
 		}
 		if (p->prox != NULL)
 		{
@@ -438,7 +451,6 @@ void mov_SnakeDireita(char tela[ALTURA][LARGURA], Node *snk, int dir)
 			{
 				if (aux->n.y >= 1 && aux->prox == NULL)
 				{
-					//for (aux = snk; aux->prox != NULL; aux = aux->prox);
 					mov_Snake(tela, p, dir);
 					insereCorpo(tela, aux, aux->n);
 					gerenciaCobra(tela, p, dir);
@@ -487,12 +499,17 @@ void mov_SnakeBaixo(char tela[ALTURA][LARGURA], Node *snk, int dir)
 		tela[p->n.x][p->n.y] = p->n.corpo;
 		if (tela[p->n.x + 1][p->n.y] == FOOD)
 		{
-			for (aux = snk; aux->prox != NULL; aux = aux->prox);
-			insereCorpo(tela, aux, aux->n);
-			mov_Snake(tela, p, dir);
-			gerenciaCobra(tela, p, dir);
-			food(tela);
-			score(tela);
+			for (aux = p; aux->prox != NULL; aux = aux->prox)
+			{
+				if (aux->prox == NULL)
+				{
+					insereCorpo(tela, aux, aux->n);
+					mov_Snake(tela, p, dir);
+					gerenciaCobra(tela, p, dir);
+					food(tela);
+					score(tela);
+				}
+			}
 		}
 		if (p->prox != NULL)
 		{
@@ -511,7 +528,6 @@ void mov_SnakeBaixo(char tela[ALTURA][LARGURA], Node *snk, int dir)
 			{
 				if (aux->n.x >= 1 && aux->prox == NULL)
 				{
-					//for (aux = snk; aux->prox != NULL; aux = aux->prox);
 					mov_Snake(tela, p, dir);
 					insereCorpo(tela, aux, aux->n);
 					gerenciaCobra(tela, p, dir);
@@ -631,9 +647,9 @@ void reset(char tela[ALTURA][LARGURA], Node *snk)
 
 	if (c == 's' || c == 'S')
 	{
-		u = '0';
-		d = '0';
-		c = '0';
+		unidade = '0';
+		dezena = '0';
+		centena = '0';
 		free(snk);
 		main();
 	}
@@ -735,24 +751,24 @@ void score(char tela[ALTURA][LARGURA])
 {	
 	int i;
 
-	if (u <= '9' && d <= '9' && c <= '9')
+	if (unidade <= '9' && dezena <= '9' && centena <= '9')
 	{
-		if (u == '0')
+		if (unidade == '0')
 		{
-			u++;
+			unidade++;
 			for (i = 0; i < 3; i++)
 			{
 				if (i == 0)
 				{
-					s[i] = c;
+					s[i] = centena;
 				}
 				if (i == 1)
 				{
-					s[i] = d;
+					s[i] = dezena;
 				}
 				if (i == 2)
 				{
-					s[i] = u;
+					s[i] = unidade;
 				}
 			}
 			for (i = 0; i < 3; i++)
@@ -760,23 +776,24 @@ void score(char tela[ALTURA][LARGURA])
 				tela[0][(LARGURA / 2) + 3 + i] = s[i];
 			}
 		}
-		else if (u == '9')
+		else if (dezena == '9' && unidade == '9')
 		{
-			d++;
-			u = '0';
+			centena++;
+			dezena = '0';
+			unidade = '0';
 			for (i = 0; i < 3; i++)
 			{
 				if (i == 0)
 				{
-					s[i] = c;
+					s[i] = centena;
 				}
 				if (i == 1)
 				{
-					s[i] = d;
+					s[i] = dezena;
 				}
 				if (i == 2)
 				{
-					s[i] = u;
+					s[i] = unidade;
 				}
 			}
 			for (i = 0; i < 3; i++)
@@ -784,24 +801,23 @@ void score(char tela[ALTURA][LARGURA])
 				tela[0][(LARGURA / 2) + 3 + i] = s[i];
 			}
 		}
-		else if (d == '9')
+		else if (unidade == '9')
 		{
-			c++;
-			d = '0';
-			u = '0';
+			dezena++;
+			unidade = '0';
 			for (i = 0; i < 3; i++)
 			{
 				if (i == 0)
 				{
-					s[i] = c;
+					s[i] = centena;
 				}
 				if (i == 1)
 				{
-					s[i] = d;
+					s[i] = dezena;
 				}
 				if (i == 2)
 				{
-					s[i] = u;
+					s[i] = unidade;
 				}
 			}
 			for (i = 0; i < 3; i++)
@@ -809,22 +825,45 @@ void score(char tela[ALTURA][LARGURA])
 				tela[0][(LARGURA / 2) + 3 + i] = s[i];
 			}
 		}
-		else if(u > '0' && u < '9')
+		else if(unidade > '0' && unidade < '9')
 		{
-			u++;
+			unidade++;
 			for (i = 0; i < 3; i++)
 			{
 				if (i == 0)
 				{
-					s[i] = c;
+					s[i] = centena;
 				}
 				if (i == 1)
 				{
-					s[i] = d;
+					s[i] = dezena;
 				}
 				if (i == 2)
 				{
-					s[i] = u;
+					s[i] = unidade;
+				}
+			}
+			for (i = 0; i < 3; i++)
+			{
+				tela[0][(LARGURA / 2) + 3 + i] = s[i];
+			}
+		}
+		else if (dezena > '0' && dezena < '9')
+		{
+			unidade++;
+			for (i = 0; i < 3; i++)
+			{
+				if (i == 0)
+				{
+					s[i] = centena;
+				}
+				if (i == 1)
+				{
+					s[i] = dezena;
+				}
+				if (i == 2)
+				{
+					s[i] = unidade;
 				}
 			}
 			for (i = 0; i < 3; i++)
@@ -833,4 +872,5 @@ void score(char tela[ALTURA][LARGURA])
 			}
 		}
 	}
+
 }
