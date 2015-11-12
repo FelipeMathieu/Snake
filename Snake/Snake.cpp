@@ -366,6 +366,7 @@ void mov_SnakeCima(char tela[ALTURA][LARGURA], Node *snk, int dir)
 		tela[p->n.x][p->n.y] = ESPACO;
 		p->n.x = ALTURA - 2;
 		tela[p->n.x][p->n.y] = p->n.corpo;
+
 		if (tela[p->n.x - 1][p->n.y] == FOOD)
 		{
 			for (aux = p; aux->prox != NULL; aux = aux->prox)
@@ -443,8 +444,7 @@ void mov_SnakeDireita(char tela[ALTURA][LARGURA], Node *snk, int dir)
 		tela[p->n.x][p->n.y] = ESPACO;
 		p->n.y = 1;
 		tela[p->n.x][p->n.y] = p->n.corpo;
-		tela[p->n.x][0] = VERTICAL;
-		tela[p->n.x][LARGURA] = VERTICAL;
+
 		if (tela[p->n.x][p->n.y + 1] == FOOD)
 		{
 			for (aux = p; aux->prox != NULL; aux = aux->prox)
