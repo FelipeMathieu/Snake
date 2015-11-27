@@ -6,6 +6,7 @@
 #include<stdio.h>
 #include<Windows.h>
 #include<time.h>
+#include<string.h>
 
 #define LARGURA 70
 #define ALTURA 25
@@ -58,8 +59,9 @@ typedef struct seta {
 	int x;
 }Seta;
 
+void placar(char tela[ALTURA][LARGURA]);
 void inicia_valores(char tela[ALTURA][LARGURA], Node *snk, Cobra *c);
-void desenha(char tela[ALTURA][LARGURA]);
+void desenha(char tela[ALTURA][LARGURA], Node *Snk);
 Node *cria_corpo(void);
 Node *insereSnake(char tela[ALTURA][LARGURA], Node *snk, Cobra c);
 Node *insereCorpo(char tela[ALTURA][LARGURA], Node *snk, Cobra c);
@@ -73,32 +75,55 @@ void food(char tela[ALTURA][LARGURA]);
 void reset(char tela[ALTURA][LARGURA], Node *snk);
 void update(char tela[ALTURA][LARGURA], Node *snk, int dir, int m);
 void score(char tela[ALTURA][LARGURA]);
-int menuInicial(char tela[ALTURA][LARGURA], Node *snk);
-int menuDificuldade(char tela[ALTURA][LARGURA], Node *snk, int modo);
-int menuLoad(char tela[ALTURA][LARGURA], Node *snk);
+Node *inicia_valores_load(FILE *save, char tela[ALTURA][LARGURA], Node *snk, Cobra *c);
+FILE *menuInicial(char tela[ALTURA][LARGURA], Node *snk, int *m);
+int menuDificuldade(char tela[ALTURA][LARGURA], Node *snk);
+FILE *menuLoad(char tela[ALTURA][LARGURA], Node *snk, int *m);
 void saveGame(char tela[ALTURA][LARGURA], Node *snk, int m);
 
 char unidade = '0', dezena = '0', centena = '0';
 char s[3];
+int x, y;
+int loade;
 
 int main(int mM)
 {
 	char tela[ALTURA][LARGURA];
+	int dir, m, pause = 0;
 	Cobra c;
-	int dir = SETA_DIREITA, m, pause = 0;
 	Seta s;
+	FILE *save = NULL;
+
+	loade = 0;
 
 	Node *Snk = cria_corpo();
 
-	m = menuInicial(tela, Snk);
+	save = menuInicial(tela, Snk, &m);
 
-	inicia_valores(tela, Snk, &c);
-	Snk = insereSnake(tela, Snk, c);
-	Snk = insereSnake(tela, Snk, c);
-	Snk = insereSnake(tela, Snk, c);
+	if (save == NULL)
+	{
+		dir = SETA_DIREITA;
+		inicia_valores(tela, Snk, &c);
+		Snk = insereSnake(tela, Snk, c);
+		Snk = insereSnake(tela, Snk, c);
+		Snk = insereSnake(tela, Snk, c);
+	}
+	else
+	{
+		Snk = inicia_valores_load(save, tela, Snk, &c);
+		dir = Snk->n.d;
+		loade = 1;
+		fclose(save);
+	}
 
 	gerenciaCobra(tela, Snk, dir);
-	food(tela);
+	if (loade == 0)
+	{
+		food(tela);
+	}
+	tela[x][y] = FOOD;
+	loade = 0;
+
 	TEMA;
 
 	while (1)
@@ -107,7 +132,7 @@ int main(int mM)
 		cord.X = 0;
 		cord.Y = 0;
 		SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), cord);
-		desenha(tela);
+		desenha(tela, Snk);
 
 		if (_kbhit())
 		{
@@ -134,16 +159,16 @@ int main(int mM)
 				while (pause == 0)
 				{
 					SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), cord);
-					desenha(tela);
+					desenha(tela, Snk);
 
 					dir = _getch();
-					if (dir == SETA_CIMA && s.x > 4)
+					if (dir == SETA_CIMA && s.x > 5)
 					{
 						tela[s.x][32] = ESPACO;
 						s.x--;
 						tela[s.x][32] = SETINHA;
 					}
-					else if (dir == SETA_BAIXO && s.x < 7)
+					else if (dir == SETA_BAIXO && s.x < 6)
 					{
 						tela[s.x][32] = ESPACO;
 						s.x++;
@@ -275,12 +300,12 @@ void inicia_valores(char tela[ALTURA][LARGURA], Node *snk, Cobra *c)
 	c->y = LARGURA / 2;
 	c->d = DIREITA;
 
-	tela[0][(LARGURA/2)-3] = 'S';
-	tela[0][(LARGURA/2)-2] = 'C';
-	tela[0][(LARGURA/2)-1] = 'O';
-	tela[0][LARGURA/2] = 'R';
-	tela[0][(LARGURA/2) + 1] = 'E';
-	tela[0][(LARGURA/2) + 2] = ':';
+	tela[0][(LARGURA / 2) - 3] = 'S';
+	tela[0][(LARGURA / 2) - 2] = 'C';
+	tela[0][(LARGURA / 2) - 1] = 'O';
+	tela[0][LARGURA / 2] = 'R';
+	tela[0][(LARGURA / 2) + 1] = 'E';
+	tela[0][(LARGURA / 2) + 2] = ':';
 	score(tela);
 }
 
@@ -292,17 +317,28 @@ void gerenciaCobra(char tela[ALTURA][LARGURA], Node *snk, int dir)
 	}
 }
 
-void desenha(char tela[ALTURA][LARGURA])
+void desenha(char tela[ALTURA][LARGURA], Node *Snk)
 {
 	int i, j;
+	HANDLE hConsole;
+
+	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 
 	for (i = 0; i < ALTURA; i++)
 	{
 		for (j = 0; j < LARGURA; j++)
 		{
+			if (Snk != NULL && i == Snk->n.x && j == Snk->n.y)
+			{
+				SetConsoleTextAttribute(hConsole, 2);
+			}
 			printf("%c", tela[i][j]);
+			SetConsoleTextAttribute(hConsole, 1);
 		}
-		printf("\n");
+		if (i != ALTURA - 1)
+		{
+			printf("\n");
+		}
 	}
 }
 
@@ -348,7 +384,7 @@ Node *insereSnake(char tela[ALTURA][LARGURA], Node *snk, Cobra c)
 	Node *novo = (Node *)malloc(sizeof(Node));
 	Node *ant = NULL;
 	Node *p;
-	
+
 	for (p = snk; p != NULL; p = p->prox)
 	{
 		ant = p;
@@ -396,7 +432,7 @@ void mov_SnakeEsquerda(char tela[ALTURA][LARGURA], Node *snk, int dir, int m)
 {
 	Node *p = snk;
 	Node *aux = NULL;
-	
+
 	if (m == 2)
 	{
 		if ((tela[p->n.x][p->n.y - 1] == ESPACO || tela[p->n.x][p->n.y - 1] == FOOD) && p->n.y != 1)
@@ -927,8 +963,6 @@ void mov_SnakeBaixo(char tela[ALTURA][LARGURA], Node *snk, int dir, int m)
 
 void food(char tela[ALTURA][LARGURA])
 {
-	int x, y;
-
 	x = rand() % ALTURA;
 	y = rand() % LARGURA;
 
@@ -945,6 +979,8 @@ void food(char tela[ALTURA][LARGURA])
 void reset(char tela[ALTURA][LARGURA], Node *snk)
 {
 	int c;
+
+	placar(tela);
 
 	for (int i = 0; i < ALTURA; i++)
 	{
@@ -1003,7 +1039,7 @@ void reset(char tela[ALTURA][LARGURA], Node *snk)
 	cord.X = 0;
 	cord.Y = 0;
 	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), cord);
-	desenha(tela);
+	desenha(tela, snk);
 	c = _getch();
 
 	if (c == 's' || c == 'S')
@@ -1014,7 +1050,7 @@ void reset(char tela[ALTURA][LARGURA], Node *snk)
 		free(snk);
 		main(1);
 	}
-	else if(c == 'n' || c == 'N')
+	else if (c == 'n' || c == 'N')
 	{
 		free(snk);
 		exit(0);
@@ -1109,7 +1145,7 @@ void update(char tela[ALTURA][LARGURA], Node *snk, int dir, int m)
 }
 
 void score(char tela[ALTURA][LARGURA])
-{	
+{
 	int i;
 
 	if (unidade <= '9' && dezena <= '9' && centena <= '9')
@@ -1235,17 +1271,17 @@ void score(char tela[ALTURA][LARGURA])
 	}
 }
 
-int menuInicial(char tela[ALTURA][LARGURA], Node *snk)
+FILE *menuInicial(char tela[ALTURA][LARGURA], Node *snk, int *m)
 {
-	int i, j, m = 0;
+	int i, j;
 	Seta s;
+	FILE *save = NULL;
 
 	for (i = 0; i < ALTURA; i += (ALTURA - 1))
 	{
 		for (j = 0; j < LARGURA; j++)
 		{
 			tela[i][j] = HORIZONTAL;
-
 		}
 	}
 	for (i = 0; i < ALTURA - 1; i++)
@@ -1267,30 +1303,80 @@ int menuInicial(char tela[ALTURA][LARGURA], Node *snk)
 	tela[0][LARGURA - 1] = SUPERIOR_DIREITO;
 	tela[ALTURA - 1][0] = INFERIOR_ESQUERDO;
 	tela[ALTURA - 1][LARGURA - 1] = INFERIOR_DIREITO;
-	
-	tela[3][5] = TT; tela[3][10] = TT; tela[3][11] = TT; tela[3][22] = TT;
-	tela[3][6] = TT; tela[4][10] = TT; tela[4][12] = TT; tela[4][22] = TT;
-	tela[3][7] = TT; tela[5][10] = TT; tela[5][13] = TT; tela[5][22] = TT;
-	tela[4][4] = TT; tela[6][10] = TT; tela[6][14] = TT; tela[6][22] = TT;
-	tela[5][3] = TT; tela[7][10] = TT; tela[7][15] = TT; tela[7][22] = TT;
-	tela[6][3] = TT; tela[8][10] = TT; tela[8][16] = TT; tela[8][22] = TT;
-	tela[7][4] = TT; tela[9][10] = TT; tela[9][17] = TT; tela[9][22] = TT;
-	tela[8][5] = TT; tela[10][10] = TT; tela[10][18] = TT; tela[10][22] = TT;
-	tela[8][6] = TT; tela[11][10] = TT; tela[11][19] = TT; tela[11][22] = TT;
-	tela[9][6] = TY; tela[12][10] = TT; tela[12][20] = TT; tela[12][22] = TT;
-	tela[9][7] = TT; tela[13][10] = TT; tela[13][21] = TT; tela[13][22] = TT;
-	tela[10][8] = TT; tela[4][11] = TY;
-	tela[10][7] = TY; tela[5][12] = TY; tela[5][11] = TY;
-	tela[11][8] = TT; tela[6][13] = TY; tela[6][11] = TY;
-	tela[11][7] = TY; tela[7][14] = TY; tela[7][11] = TY;
-	tela[12][7] = TT; tela[8][15] = TY; tela[8][11] = TY;
-	tela[12][6] = TY; tela[9][16] = TY; tela[9][11] = TY;
-	tela[13][6] = TT; tela[10][17] = TY; tela[10][11] = TY;
-	tela[13][5] = TT; tela[11][18] = TY; tela[11][11] = TY;
-	tela[13][4] = TT; tela[12][19] = TY; tela[12][11] = TY;
-	tela[4][5] = TY; tela[13][20] = TY; tela[13][11] = TY;
-	tela[5][4] = TY;
-	tela[6][4] = TY;
+
+	//------------S---- --N----------------------------------------------   	-----A--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	tela[3][5] = TT; tela[3][10] = TT; tela[3][11] = TT; tela[3][22] = TT;		tela[3][30] = TT;
+	tela[3][6] = TT; tela[4][10] = TT; tela[4][12] = TT; tela[4][22] = TT;		tela[4][29] = TT; tela[4][31] = TT;
+	tela[3][7] = TT; tela[5][10] = TT; tela[5][13] = TT; tela[5][22] = TT;		tela[5][28] = TT; tela[5][32] = TT;
+	tela[4][4] = TT; tela[6][10] = TT; tela[6][14] = TT; tela[6][22] = TT;		tela[6][27] = TT; tela[6][33] = TT;
+	tela[5][3] = TT; tela[7][10] = TT; tela[7][15] = TT; tela[7][22] = TT;		tela[7][26] = TT; tela[7][34] = TT;
+	tela[6][3] = TT; tela[8][10] = TT; tela[8][16] = TT; tela[8][22] = TT;		tela[8][26] = TT; tela[8][27] = TT; tela[8][28] = TT; tela[8][29] = TT; tela[8][30] = TT; tela[8][31] = TT; tela[8][32] = TT; tela[8][33] = TT; tela[8][34] = TT;
+	tela[7][4] = TT; tela[9][10] = TT; tela[9][17] = TT; tela[9][22] = TT;		tela[9][25] = TT; tela[9][35] = TT;
+	tela[8][5] = TT; tela[10][10] = TT; tela[10][18] = TT; tela[10][22] = TT;	tela[10][25] = TT; tela[10][35] = TT;
+	tela[8][6] = TT; tela[11][10] = TT; tela[11][19] = TT; tela[11][22] = TT;	tela[11][24] = TT; tela[11][36] = TT;
+	tela[9][6] = TY; tela[12][10] = TT; tela[12][20] = TT; tela[12][22] = TT;	tela[12][24] = TT; tela[12][36] = TT;
+	tela[9][7] = TT; tela[13][10] = TT; tela[13][21] = TT; tela[13][22] = TT;	tela[13][24] = TT; tela[13][36] = TT;
+	tela[10][8] = TT; tela[4][11] = TY;	tela[4][9] = TY;						tela[13][23] = TY;					tela[13][35] = TY;
+	tela[10][7] = TY; tela[5][12] = TY; tela[5][9] = TY;						tela[12][23] = TY;					tela[12][35] = TY;
+	tela[11][8] = TT; tela[6][13] = TY; tela[6][9] = TY; tela[4][21] = TY;		tela[11][23] = TY;					tela[11][35] = TY;
+	tela[11][7] = TY; tela[7][14] = TY; tela[7][9] = TY; tela[5][21] = TY;		tela[10][24] = TY;					tela[10][34] = TY;
+	tela[12][7] = TT; tela[8][15] = TY; tela[8][9] = TY; tela[6][21] = TY;		tela[9][24] = TY; tela[8][25] = TY; tela[9][34] = TY; tela[9][33] = TY;
+	tela[12][6] = TY; tela[9][16] = TY; tela[9][9] = TY; tela[7][21] = TY;		tela[7][25] = TY;					tela[7][33] = TY;
+	tela[13][6] = TT; tela[10][17] = TY; tela[10][9] = TY; tela[8][21] = TY;	tela[6][26] = TY;					tela[6][32] = TY;
+	tela[13][5] = TT; tela[11][18] = TY; tela[11][9] = TY; tela[9][21] = TY;	tela[5][27] = TY;					tela[5][31] = TY;
+	tela[13][4] = TT; tela[12][19] = TY; tela[12][9] = TY; tela[10][21] = TY;	tela[4][28] = TY;					tela[4][30] = TY;
+	tela[4][3] = TY; tela[13][20] = TY; tela[13][9] = TY; tela[11][21] = TY;	tela[3][29] = TY;
+	tela[5][2] = TY;									   tela[12][21] = TY;
+	tela[6][2] = TY; tela[7][3] = TY;
+	tela[13][3] = TY;
+
+	//-------K-------
+	tela[3][38] = TT; tela[3][45] = TT;
+	tela[4][38] = TT; tela[4][44] = TT;
+	tela[5][38] = TT; tela[5][43] = TT;
+	tela[6][38] = TT; tela[6][42] = TT;
+	tela[7][38] = TT; tela[7][41] = TT;
+	tela[8][38] = TT; tela[8][39] = TT; tela[8][40] = TT;
+	tela[9][38] = TT; tela[9][41] = TT;
+	tela[10][38] = TT; tela[10][42] = TT;
+	tela[11][38] = TT; tela[11][43] = TT;
+	tela[12][38] = TT; tela[12][44] = TT;
+	tela[13][38] = TT; tela[13][45] = TT;
+
+	tela[4][37] = TY;
+	tela[5][37] = TY;
+	tela[6][37] = TY;
+	tela[7][37] = TY;
+	tela[8][37] = TY;
+	tela[9][37] = TY; tela[9][40] = TY;
+	tela[10][37] = TY; tela[10][41] = TY;
+	tela[11][37] = TY; tela[11][42] = TY;
+	tela[12][37] = TY; tela[12][43] = TY;
+	tela[13][37] = TY; tela[13][44] = TY;
+
+	//-------E-------
+	tela[3][47] = TT; tela[3][48] = TT; tela[3][49] = TT; tela[3][50] = TT; tela[3][51] = TT; tela[3][52] = TT; tela[3][53] = TT;
+	tela[4][47] = TT;
+	tela[5][47] = TT;
+	tela[6][47] = TT;
+	tela[7][47] = TT;
+	tela[8][47] = TT; tela[8][48] = TT; tela[8][49] = TT; tela[8][50] = TT;
+	tela[9][47] = TT;
+	tela[10][47] = TT;
+	tela[11][47] = TT;
+	tela[12][47] = TT;
+	tela[13][47] = TT; tela[13][48] = TT; tela[13][49] = TT; tela[13][50] = TT; tela[13][51] = TT; tela[13][52] = TT; tela[13][53] = TT;
+
+	tela[4][46] = TY; tela[4][48] = TY; tela[4][49] = TY; tela[4][50] = TY; tela[4][51] = TY; tela[4][52] = TY; tela[4][53] = TY;
+	tela[5][46] = TY;
+	tela[6][46] = TY;
+	tela[7][46] = TY;
+	tela[8][46] = TY;
+	tela[9][46] = TY; tela[9][48] = TY; tela[9][49] = TY; tela[9][50] = TY;
+	tela[10][46] = TY;
+	tela[11][46] = TY;
+	tela[12][46] = TY;
+	tela[13][46] = TY;
 
 	tela[17][27] = SETINHA;
 	s.x = 17;
@@ -1313,7 +1399,7 @@ int menuInicial(char tela[ALTURA][LARGURA], Node *snk)
 	tela[18][34] = 'a';
 	tela[18][35] = 'm';
 	tela[18][36] = 'e';
-	
+
 
 	tela[20][50] = 'F';
 	tela[20][51] = 'e';
@@ -1352,26 +1438,26 @@ int menuInicial(char tela[ALTURA][LARGURA], Node *snk)
 	tela[19][29] = 'u';
 	tela[19][30] = 'i';
 	tela[19][31] = 't';
-	
-	while (m != ENTER)
+
+	while (*m != ENTER)
 	{
 		COORD cord;
 		cord.X = 0;
 		cord.Y = 0;
 		SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), cord);
-		desenha(tela);
+		desenha(tela, snk);
 
 		if (_kbhit())
 		{
-			m = _getch();
+			*m = _getch();
 
-			if (m == SETA_CIMA && s.x > 17)
+			if (*m == SETA_CIMA && s.x > 17)
 			{
 				tela[s.x][27] = ESPACO;
 				s.x--;
 				tela[s.x][27] = SETINHA;
 			}
-			else if (m == SETA_BAIXO && s.x < 19)
+			else if (*m == SETA_BAIXO && s.x < 19)
 			{
 				tela[s.x][27] = ESPACO;
 				s.x++;
@@ -1380,23 +1466,24 @@ int menuInicial(char tela[ALTURA][LARGURA], Node *snk)
 		}
 	}
 
-	if (m == ENTER && s.x == 17)
+	if (*m == ENTER && s.x == 17)
 	{
-		m = menuDificuldade(tela, snk, 0);
+		*m = menuDificuldade(tela, snk);
+		save = NULL;
 	}
-	else if (m == ENTER && s.x == 18)
+	else if (*m == ENTER && s.x == 18)
 	{
-		m = menuLoad(tela, snk);
+		save = menuLoad(tela, snk, m);
 	}
-	else if (m == ENTER && s.x == 19)
+	else if (*m == ENTER && s.x == 19)
 	{
 		exit(0);
 	}
 
-	return m;
+	return save;
 }
 
-int menuDificuldade(char tela[ALTURA][LARGURA], Node *snk, int modo)
+int menuDificuldade(char tela[ALTURA][LARGURA], Node *snk)
 {
 	int i, j, m = 0;
 	Seta s;
@@ -1429,29 +1516,79 @@ int menuDificuldade(char tela[ALTURA][LARGURA], Node *snk, int modo)
 	tela[ALTURA - 1][0] = INFERIOR_ESQUERDO;
 	tela[ALTURA - 1][LARGURA - 1] = INFERIOR_DIREITO;
 
-	tela[3][5] = TT; tela[3][10] = TT; tela[3][11] = TT; tela[3][22] = TT;
-	tela[3][6] = TT; tela[4][10] = TT; tela[4][12] = TT; tela[4][22] = TT;
-	tela[3][7] = TT; tela[5][10] = TT; tela[5][13] = TT; tela[5][22] = TT;
-	tela[4][4] = TT; tela[6][10] = TT; tela[6][14] = TT; tela[6][22] = TT;
-	tela[5][3] = TT; tela[7][10] = TT; tela[7][15] = TT; tela[7][22] = TT;
-	tela[6][3] = TT; tela[8][10] = TT; tela[8][16] = TT; tela[8][22] = TT;
-	tela[7][4] = TT; tela[9][10] = TT; tela[9][17] = TT; tela[9][22] = TT;
-	tela[8][5] = TT; tela[10][10] = TT; tela[10][18] = TT; tela[10][22] = TT;
-	tela[8][6] = TT; tela[11][10] = TT; tela[11][19] = TT; tela[11][22] = TT;
-	tela[9][6] = TY; tela[12][10] = TT; tela[12][20] = TT; tela[12][22] = TT;
-	tela[9][7] = TT; tela[13][10] = TT; tela[13][21] = TT; tela[13][22] = TT;
-	tela[10][8] = TT; tela[4][11] = TY;
-	tela[10][7] = TY; tela[5][12] = TY; tela[5][11] = TY;
-	tela[11][8] = TT; tela[6][13] = TY; tela[6][11] = TY;
-	tela[11][7] = TY; tela[7][14] = TY; tela[7][11] = TY;
-	tela[12][7] = TT; tela[8][15] = TY; tela[8][11] = TY;
-	tela[12][6] = TY; tela[9][16] = TY; tela[9][11] = TY;
-	tela[13][6] = TT; tela[10][17] = TY; tela[10][11] = TY;
-	tela[13][5] = TT; tela[11][18] = TY; tela[11][11] = TY;
-	tela[13][4] = TT; tela[12][19] = TY; tela[12][11] = TY;
-	tela[4][5] = TY; tela[13][20] = TY; tela[13][11] = TY;
-	tela[5][4] = TY;
-	tela[6][4] = TY;
+	//------------S---- --N----------------------------------------------   	-----A--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	tela[3][5] = TT; tela[3][10] = TT; tela[3][11] = TT; tela[3][22] = TT;		tela[3][30] = TT;
+	tela[3][6] = TT; tela[4][10] = TT; tela[4][12] = TT; tela[4][22] = TT;		tela[4][29] = TT; tela[4][31] = TT;
+	tela[3][7] = TT; tela[5][10] = TT; tela[5][13] = TT; tela[5][22] = TT;		tela[5][28] = TT; tela[5][32] = TT;
+	tela[4][4] = TT; tela[6][10] = TT; tela[6][14] = TT; tela[6][22] = TT;		tela[6][27] = TT; tela[6][33] = TT;
+	tela[5][3] = TT; tela[7][10] = TT; tela[7][15] = TT; tela[7][22] = TT;		tela[7][26] = TT; tela[7][34] = TT;
+	tela[6][3] = TT; tela[8][10] = TT; tela[8][16] = TT; tela[8][22] = TT;		tela[8][26] = TT; tela[8][27] = TT; tela[8][28] = TT; tela[8][29] = TT; tela[8][30] = TT; tela[8][31] = TT; tela[8][32] = TT; tela[8][33] = TT; tela[8][34] = TT;
+	tela[7][4] = TT; tela[9][10] = TT; tela[9][17] = TT; tela[9][22] = TT;		tela[9][25] = TT; tela[9][35] = TT;
+	tela[8][5] = TT; tela[10][10] = TT; tela[10][18] = TT; tela[10][22] = TT;	tela[10][25] = TT; tela[10][35] = TT;
+	tela[8][6] = TT; tela[11][10] = TT; tela[11][19] = TT; tela[11][22] = TT;	tela[11][24] = TT; tela[11][36] = TT;
+	tela[9][6] = TY; tela[12][10] = TT; tela[12][20] = TT; tela[12][22] = TT;	tela[12][24] = TT; tela[12][36] = TT;
+	tela[9][7] = TT; tela[13][10] = TT; tela[13][21] = TT; tela[13][22] = TT;	tela[13][24] = TT; tela[13][36] = TT;
+	tela[10][8] = TT; tela[4][11] = TY;	tela[4][9] = TY;						tela[13][23] = TY;					tela[13][35] = TY;
+	tela[10][7] = TY; tela[5][12] = TY; tela[5][9] = TY;						tela[12][23] = TY;					tela[12][35] = TY;
+	tela[11][8] = TT; tela[6][13] = TY; tela[6][9] = TY; tela[4][21] = TY;		tela[11][23] = TY;					tela[11][35] = TY;
+	tela[11][7] = TY; tela[7][14] = TY; tela[7][9] = TY; tela[5][21] = TY;		tela[10][24] = TY;					tela[10][34] = TY;
+	tela[12][7] = TT; tela[8][15] = TY; tela[8][9] = TY; tela[6][21] = TY;		tela[9][24] = TY; tela[8][25] = TY; tela[9][34] = TY; tela[9][33] = TY;
+	tela[12][6] = TY; tela[9][16] = TY; tela[9][9] = TY; tela[7][21] = TY;		tela[7][25] = TY;					tela[7][33] = TY;
+	tela[13][6] = TT; tela[10][17] = TY; tela[10][9] = TY; tela[8][21] = TY;	tela[6][26] = TY;					tela[6][32] = TY;
+	tela[13][5] = TT; tela[11][18] = TY; tela[11][9] = TY; tela[9][21] = TY;	tela[5][27] = TY;					tela[5][31] = TY;
+	tela[13][4] = TT; tela[12][19] = TY; tela[12][9] = TY; tela[10][21] = TY;	tela[4][28] = TY;					tela[4][30] = TY;
+	tela[4][3] = TY; tela[13][20] = TY; tela[13][9] = TY; tela[11][21] = TY;	tela[3][29] = TY;
+	tela[5][2] = TY;									   tela[12][21] = TY;
+	tela[6][2] = TY; tela[7][3] = TY;
+	tela[13][3] = TY;
+
+	//-------K-------
+	tela[3][38] = TT; tela[3][45] = TT;
+	tela[4][38] = TT; tela[4][44] = TT;
+	tela[5][38] = TT; tela[5][43] = TT;
+	tela[6][38] = TT; tela[6][42] = TT;
+	tela[7][38] = TT; tela[7][41] = TT;
+	tela[8][38] = TT; tela[8][39] = TT; tela[8][40] = TT;
+	tela[9][38] = TT; tela[9][41] = TT;
+	tela[10][38] = TT; tela[10][42] = TT;
+	tela[11][38] = TT; tela[11][43] = TT;
+	tela[12][38] = TT; tela[12][44] = TT;
+	tela[13][38] = TT; tela[13][45] = TT;
+
+	tela[4][37] = TY;
+	tela[5][37] = TY;
+	tela[6][37] = TY;
+	tela[7][37] = TY;
+	tela[8][37] = TY;
+	tela[9][37] = TY; tela[9][40] = TY;
+	tela[10][37] = TY; tela[10][41] = TY;
+	tela[11][37] = TY; tela[11][42] = TY;
+	tela[12][37] = TY; tela[12][43] = TY;
+	tela[13][37] = TY; tela[13][44] = TY;
+
+	//-------E-------
+	tela[3][47] = TT; tela[3][48] = TT; tela[3][49] = TT; tela[3][50] = TT; tela[3][51] = TT; tela[3][52] = TT; tela[3][53] = TT;
+	tela[4][47] = TT;
+	tela[5][47] = TT;
+	tela[6][47] = TT;
+	tela[7][47] = TT;
+	tela[8][47] = TT; tela[8][48] = TT; tela[8][49] = TT; tela[8][50] = TT;
+	tela[9][47] = TT;
+	tela[10][47] = TT;
+	tela[11][47] = TT;
+	tela[12][47] = TT;
+	tela[13][47] = TT; tela[13][48] = TT; tela[13][49] = TT; tela[13][50] = TT; tela[13][51] = TT; tela[13][52] = TT; tela[13][53] = TT;
+
+	tela[4][46] = TY; tela[4][48] = TY; tela[4][49] = TY; tela[4][50] = TY; tela[4][51] = TY; tela[4][52] = TY; tela[4][53] = TY;
+	tela[5][46] = TY;
+	tela[6][46] = TY;
+	tela[7][46] = TY;
+	tela[8][46] = TY;
+	tela[9][46] = TY; tela[9][48] = TY; tela[9][49] = TY; tela[9][50] = TY;
+	tela[10][46] = TY;
+	tela[11][46] = TY;
+	tela[12][46] = TY;
+	tela[13][46] = TY;
 
 	tela[17][27] = SETINHA;
 	s.x = 17;
@@ -1479,7 +1616,7 @@ int menuDificuldade(char tela[ALTURA][LARGURA], Node *snk, int modo)
 		cord.X = 0;
 		cord.Y = 0;
 		SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), cord);
-		desenha(tela);
+		desenha(tela, snk);
 
 		if (_kbhit())
 		{
@@ -1511,14 +1648,14 @@ int menuDificuldade(char tela[ALTURA][LARGURA], Node *snk, int modo)
 		exit(0);
 	}
 
-	return modo;
+	return m;
 }
 
-int menuLoad(char tela[ALTURA][LARGURA], Node *snk)
+FILE *menuLoad(char tela[ALTURA][LARGURA], Node *snk, int *m)
 {
 	FILE *load = fopen("save.txt", "r");
 	Seta s;
-	int i, j, m = 0;
+	int i, j;
 
 	if (load == NULL)
 	{
@@ -1550,29 +1687,79 @@ int menuLoad(char tela[ALTURA][LARGURA], Node *snk)
 		tela[ALTURA - 1][0] = INFERIOR_ESQUERDO;
 		tela[ALTURA - 1][LARGURA - 1] = INFERIOR_DIREITO;
 
-		tela[3][5] = TT; tela[3][10] = TT; tela[3][11] = TT; tela[3][22] = TT;
-		tela[3][6] = TT; tela[4][10] = TT; tela[4][12] = TT; tela[4][22] = TT;
-		tela[3][7] = TT; tela[5][10] = TT; tela[5][13] = TT; tela[5][22] = TT;
-		tela[4][4] = TT; tela[6][10] = TT; tela[6][14] = TT; tela[6][22] = TT;
-		tela[5][3] = TT; tela[7][10] = TT; tela[7][15] = TT; tela[7][22] = TT;
-		tela[6][3] = TT; tela[8][10] = TT; tela[8][16] = TT; tela[8][22] = TT;
-		tela[7][4] = TT; tela[9][10] = TT; tela[9][17] = TT; tela[9][22] = TT;
-		tela[8][5] = TT; tela[10][10] = TT; tela[10][18] = TT; tela[10][22] = TT;
-		tela[8][6] = TT; tela[11][10] = TT; tela[11][19] = TT; tela[11][22] = TT;
-		tela[9][6] = TY; tela[12][10] = TT; tela[12][20] = TT; tela[12][22] = TT;
-		tela[9][7] = TT; tela[13][10] = TT; tela[13][21] = TT; tela[13][22] = TT;
-		tela[10][8] = TT; tela[4][11] = TY;
-		tela[10][7] = TY; tela[5][12] = TY; tela[5][11] = TY;
-		tela[11][8] = TT; tela[6][13] = TY; tela[6][11] = TY;
-		tela[11][7] = TY; tela[7][14] = TY; tela[7][11] = TY;
-		tela[12][7] = TT; tela[8][15] = TY; tela[8][11] = TY;
-		tela[12][6] = TY; tela[9][16] = TY; tela[9][11] = TY;
-		tela[13][6] = TT; tela[10][17] = TY; tela[10][11] = TY;
-		tela[13][5] = TT; tela[11][18] = TY; tela[11][11] = TY;
-		tela[13][4] = TT; tela[12][19] = TY; tela[12][11] = TY;
-		tela[4][5] = TY; tela[13][20] = TY; tela[13][11] = TY;
-		tela[5][4] = TY;
-		tela[6][4] = TY;
+		//------------S---- --N----------------------------------------------   	-----A--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+		tela[3][5] = TT; tela[3][10] = TT; tela[3][11] = TT; tela[3][22] = TT;		tela[3][30] = TT;
+		tela[3][6] = TT; tela[4][10] = TT; tela[4][12] = TT; tela[4][22] = TT;		tela[4][29] = TT; tela[4][31] = TT;
+		tela[3][7] = TT; tela[5][10] = TT; tela[5][13] = TT; tela[5][22] = TT;		tela[5][28] = TT; tela[5][32] = TT;
+		tela[4][4] = TT; tela[6][10] = TT; tela[6][14] = TT; tela[6][22] = TT;		tela[6][27] = TT; tela[6][33] = TT;
+		tela[5][3] = TT; tela[7][10] = TT; tela[7][15] = TT; tela[7][22] = TT;		tela[7][26] = TT; tela[7][34] = TT;
+		tela[6][3] = TT; tela[8][10] = TT; tela[8][16] = TT; tela[8][22] = TT;		tela[8][26] = TT; tela[8][27] = TT; tela[8][28] = TT; tela[8][29] = TT; tela[8][30] = TT; tela[8][31] = TT; tela[8][32] = TT; tela[8][33] = TT; tela[8][34] = TT;
+		tela[7][4] = TT; tela[9][10] = TT; tela[9][17] = TT; tela[9][22] = TT;		tela[9][25] = TT; tela[9][35] = TT;
+		tela[8][5] = TT; tela[10][10] = TT; tela[10][18] = TT; tela[10][22] = TT;	tela[10][25] = TT; tela[10][35] = TT;
+		tela[8][6] = TT; tela[11][10] = TT; tela[11][19] = TT; tela[11][22] = TT;	tela[11][24] = TT; tela[11][36] = TT;
+		tela[9][6] = TY; tela[12][10] = TT; tela[12][20] = TT; tela[12][22] = TT;	tela[12][24] = TT; tela[12][36] = TT;
+		tela[9][7] = TT; tela[13][10] = TT; tela[13][21] = TT; tela[13][22] = TT;	tela[13][24] = TT; tela[13][36] = TT;
+		tela[10][8] = TT; tela[4][11] = TY;	tela[4][9] = TY;						tela[13][23] = TY;					tela[13][35] = TY;
+		tela[10][7] = TY; tela[5][12] = TY; tela[5][9] = TY;						tela[12][23] = TY;					tela[12][35] = TY;
+		tela[11][8] = TT; tela[6][13] = TY; tela[6][9] = TY; tela[4][21] = TY;		tela[11][23] = TY;					tela[11][35] = TY;
+		tela[11][7] = TY; tela[7][14] = TY; tela[7][9] = TY; tela[5][21] = TY;		tela[10][24] = TY;					tela[10][34] = TY;
+		tela[12][7] = TT; tela[8][15] = TY; tela[8][9] = TY; tela[6][21] = TY;		tela[9][24] = TY; tela[8][25] = TY; tela[9][34] = TY; tela[9][33] = TY;
+		tela[12][6] = TY; tela[9][16] = TY; tela[9][9] = TY; tela[7][21] = TY;		tela[7][25] = TY;					tela[7][33] = TY;
+		tela[13][6] = TT; tela[10][17] = TY; tela[10][9] = TY; tela[8][21] = TY;	tela[6][26] = TY;					tela[6][32] = TY;
+		tela[13][5] = TT; tela[11][18] = TY; tela[11][9] = TY; tela[9][21] = TY;	tela[5][27] = TY;					tela[5][31] = TY;
+		tela[13][4] = TT; tela[12][19] = TY; tela[12][9] = TY; tela[10][21] = TY;	tela[4][28] = TY;					tela[4][30] = TY;
+		tela[4][3] = TY; tela[13][20] = TY; tela[13][9] = TY; tela[11][21] = TY;	tela[3][29] = TY;
+		tela[5][2] = TY;									   tela[12][21] = TY;
+		tela[6][2] = TY; tela[7][3] = TY;
+		tela[13][3] = TY;
+
+		//-------K-------
+		tela[3][38] = TT; tela[3][45] = TT;
+		tela[4][38] = TT; tela[4][44] = TT;
+		tela[5][38] = TT; tela[5][43] = TT;
+		tela[6][38] = TT; tela[6][42] = TT;
+		tela[7][38] = TT; tela[7][41] = TT;
+		tela[8][38] = TT; tela[8][39] = TT; tela[8][40] = TT;
+		tela[9][38] = TT; tela[9][41] = TT;
+		tela[10][38] = TT; tela[10][42] = TT;
+		tela[11][38] = TT; tela[11][43] = TT;
+		tela[12][38] = TT; tela[12][44] = TT;
+		tela[13][38] = TT; tela[13][45] = TT;
+
+		tela[4][37] = TY;
+		tela[5][37] = TY;
+		tela[6][37] = TY;
+		tela[7][37] = TY;
+		tela[8][37] = TY;
+		tela[9][37] = TY; tela[9][40] = TY;
+		tela[10][37] = TY; tela[10][41] = TY;
+		tela[11][37] = TY; tela[11][42] = TY;
+		tela[12][37] = TY; tela[12][43] = TY;
+		tela[13][37] = TY; tela[13][44] = TY;
+
+		//-------E-------
+		tela[3][47] = TT; tela[3][48] = TT; tela[3][49] = TT; tela[3][50] = TT; tela[3][51] = TT; tela[3][52] = TT; tela[3][53] = TT;
+		tela[4][47] = TT;
+		tela[5][47] = TT;
+		tela[6][47] = TT;
+		tela[7][47] = TT;
+		tela[8][47] = TT; tela[8][48] = TT; tela[8][49] = TT; tela[8][50] = TT;
+		tela[9][47] = TT;
+		tela[10][47] = TT;
+		tela[11][47] = TT;
+		tela[12][47] = TT;
+		tela[13][47] = TT; tela[13][48] = TT; tela[13][49] = TT; tela[13][50] = TT; tela[13][51] = TT; tela[13][52] = TT; tela[13][53] = TT;
+
+		tela[4][46] = TY; tela[4][48] = TY; tela[4][49] = TY; tela[4][50] = TY; tela[4][51] = TY; tela[4][52] = TY; tela[4][53] = TY;
+		tela[5][46] = TY;
+		tela[6][46] = TY;
+		tela[7][46] = TY;
+		tela[8][46] = TY;
+		tela[9][46] = TY; tela[9][48] = TY; tela[9][49] = TY; tela[9][50] = TY;
+		tela[10][46] = TY;
+		tela[11][46] = TY;
+		tela[12][46] = TY;
+		tela[13][46] = TY;
 
 		tela[17][28] = 'N';
 		tela[17][29] = 'a';
@@ -1607,37 +1794,36 @@ int menuLoad(char tela[ALTURA][LARGURA], Node *snk)
 		tela[18][27] = SETINHA;
 		s.x = 18;
 
-		while (m != ENTER)
+		while (*m != ENTER)
 		{
 			COORD cord;
 			cord.X = 0;
 			cord.Y = 0;
 			SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), cord);
-			desenha(tela);
+			desenha(tela, snk);
 
 			if (_kbhit())
 			{
-				m = _getch();
+				*m = _getch();
 			}
-			if (m == SETA_CIMA && s.x > 18)
+			if (*m == SETA_CIMA && s.x > 18)
 			{
 				tela[s.x][27] = ESPACO;
 				s.x--;
 				tela[s.x][27] = SETINHA;
 			}
-			else if (m == SETA_BAIXO && s.x < 19)
+			else if (*m == SETA_BAIXO && s.x < 19)
 			{
 				tela[s.x][27] = ESPACO;
 				s.x++;
 				tela[s.x][27] = SETINHA;
 			}
 		}
-		if (m == ENTER && s.x == 18)
+		if (*m == ENTER && s.x == 18)
 		{
-			m = menuDificuldade(tela, snk, 1);
-			return m;
+			*m = menuDificuldade(tela, snk);
 		}
-		else if (m == ENTER && s.x == 19)
+		else if (*m == ENTER && s.x == 19)
 		{
 			exit(0);
 		}
@@ -1649,18 +1835,30 @@ int menuLoad(char tela[ALTURA][LARGURA], Node *snk)
 			for (j = 0; j < LARGURA; j++)
 			{
 				tela[i][j] = fgetc(load);
+
+				if (tela[i][j] >= '0' && tela[i][j] <= '9')
+				{
+					if (tela[i][j - 2] >= '0' && tela[i][j - 2] <= '9' && tela[i][j - 1] >= '0' && tela[i][j - 1] <= '9')
+					{
+						unidade = tela[i][j];
+						unidade--;
+					}
+					else if (tela[i][j - 1] >= '0' && tela[i][j - 1] <= '9')
+					{
+						dezena = tela[i][j];
+					}
+					else
+					{
+						centena = tela[i][j];
+					}
+				}
 			}
 			tela[i][j] = fgetc(load);
 		}
-
-		fscanf(load, "%d", &m);
-
-
-		//for (; fscanf(load, "%d,%d", snk->n.x, snk->n.y) != EOF;);
+		fscanf(load, "%d", m);
 	}
-	fclose(load);
 
-	return m;
+	return load;
 }
 
 void saveGame(char tela[ALTURA][LARGURA], Node *snk, int m)
@@ -1687,11 +1885,133 @@ void saveGame(char tela[ALTURA][LARGURA], Node *snk, int m)
 			}
 			fputc('\n', save);
 		}
-			fprintf(save, "%d", m);
+		fprintf(save, "%d\n", m);
+		fprintf(save, "%d %d\n", x, y);
 		for (p = snk; p != NULL; p = p->prox)
 		{
-			fprintf(save, "\n%d,%d,%d", p->n.x, p->n.y, p->n.d);
+			fprintf(save, "%d %d %d\n", p->n.x, p->n.y, p->n.d);
 		}
 	}
 	fclose(save);
+}
+
+Node *inicia_valores_load(FILE *save, char tela[ALTURA][LARGURA], Node *Snk, Cobra *c)
+{
+	int i, j;
+	int x1, y1, d1;
+
+	for (i = 0; i < ALTURA; i++)
+	{
+		for (j = 0; j < LARGURA; j++)
+		{
+			if (i == 0 || i == ALTURA - 1)
+			{
+				tela[i][j] = HORIZONTAL;
+			}
+			else if (j == 0 || j == LARGURA - 1)
+			{
+				tela[i][j] = VERTICAL;
+			}
+			else
+			{
+				tela[i][j] = ESPACO;
+			}
+		}
+	}
+
+	tela[0][0] = SUPERIOR_ESQUERDO;
+	tela[0][LARGURA - 1] = SUPERIOR_DIREITO;
+	tela[ALTURA - 1][0] = INFERIOR_ESQUERDO;
+	tela[ALTURA - 1][LARGURA - 1] = INFERIOR_DIREITO;
+
+	tela[0][(LARGURA / 2) - 3] = 'S';
+	tela[0][(LARGURA / 2) - 2] = 'C';
+	tela[0][(LARGURA / 2) - 1] = 'O';
+	tela[0][LARGURA / 2] = 'R';
+	tela[0][(LARGURA / 2) + 1] = 'E';
+	tela[0][(LARGURA / 2) + 2] = ':';
+
+	score(tela);
+	fscanf(save, "%d %d\n", &x, &y);
+	while ((i = fscanf(save, "%d %d %d\n", &x1, &y1, &d1)) == 3)
+	{
+		c->x = x1;
+		c->y = y1;
+		c->d = (Direcao)d1;
+
+		Snk = insereSnake(tela, Snk, *c);
+	}
+
+	return Snk;
+}
+
+void placar(char tela[ALTURA][LARGURA])
+{
+	FILE *rank;
+	int ponto, aux_num = 0;
+	int pontos[5];
+	char nomes[5];
+	char nome = '\n', aux_nome = 0;
+	int i = 0;
+
+	if ((rank = fopen("rank.txt", "r")) == NULL)
+	{
+		system("CLS");
+		puts("Erro ao abrir ranking.");
+		system("PAUSE");
+		exit(0);
+	}
+	else
+	{
+		ponto = (centena - 48) * 100 + (dezena - 48) * 10 + (unidade - 48);
+
+		while ((fscanf(rank, "%c %d\n", &nomes[i], &pontos[i])) == 2)
+		{
+			i++;
+		}
+
+		for (i = 0; i < 5; i++)
+		{
+			if (ponto > pontos[i])
+			{
+				if (aux_num == 0)
+				{
+					do
+					{
+						system("CLS");
+						puts("Escreva uma letra para lhe identificar:");
+						nome = getchar();
+					} while (nome == '\n');
+				}
+
+				aux_num = pontos[i];
+				pontos[i] = ponto;
+				ponto = aux_num;
+				aux_nome = nomes[i];
+				nomes[i] = nome;
+				nome = aux_nome;
+			}
+		}
+
+		fclose(rank);
+		if ((rank = fopen("rank.txt", "w")) == NULL)
+		{
+			system("CLS");
+			puts("Erro ao abrir ranking.");
+			system("PAUSE");
+			exit(0);
+		}
+		else
+		{
+			system("CLS");
+
+			for (i = 0; i < 5; i++)
+			{
+				printf("\t%c\t%d\n", nomes[i], pontos[i]);
+				fprintf(rank, "%c %d\n", nomes[i], pontos[i]);
+			}
+			system("PAUSE");
+			fclose(rank);
+		}
+	}
 }
