@@ -336,13 +336,16 @@ void desenha(char tela[ALTURA][LARGURA], Node *Snk)
 			{
 				SetConsoleTextAttribute(hConsole, 3);
 			}
-			if (i==1000)
+			if (i == 0 || j == 0)
 			{
-				SetConsoleTextAttribute(hConsole, 2);
+				SetConsoleTextAttribute(hConsole, 6);
+			}
+			if (i == ALTURA - 1 || j == LARGURA - 1)
+			{
+				SetConsoleTextAttribute(hConsole, 6);
 			}
 			printf("%c", tela[i][j]);
-			SetConsoleTextAttribute(hConsole, 0x8B0DE);
-			SetConsoleTextAttribute(hConsole, 'A');
+			SetConsoleTextAttribute(hConsole, 1);
 		}
 		if (i != ALTURA - 1)
 		{
